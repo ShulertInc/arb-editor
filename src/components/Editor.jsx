@@ -422,7 +422,7 @@ export default function Editor({
                         onClick={handleTranslateWithDeepL}
                         disabled={isTranslating}
                     >
-                        {isTranslating ? 'Translating...' : 'Translate Missing'}
+                        {isTranslating ? 'Translating...' : 'Auto Translate'}
                     </button>
                     <button
                         className={dangerButtonClass}
