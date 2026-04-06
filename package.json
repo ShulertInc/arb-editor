@@ -1,15 +1,26 @@
 {
     "name": "arb-editor",
     "version": "1.0.0",
+    "type": "module",
     "private": true,
     "description": "ARB localization editor with SQLite persistence",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js",
-        "dev": "node server.js"
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "server": "node server.js"
     },
     "dependencies": {
         "better-sqlite3": "^12.8.0",
-        "express": "^5.2.1"
+        "express": "^5.2.1",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.2.2",
+        "@vitejs/plugin-react": "^6.0.1",
+        "tailwindcss": "^4.2.2",
+        "vite": "^8.0.4"
     }
 }

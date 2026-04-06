@@ -1,11 +1,14 @@
-const fs = require('fs');
-const path = require('path');
-const express = require('express');
-const Database = require('better-sqlite3');
+import Database from 'better-sqlite3';
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const dataDir = path.join(__dirname, 'data');
+const dataDir = path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    'data',
+);
 const dbPath = path.join(dataDir, 'arb-editor.db');
 
 fs.mkdirSync(dataDir, { recursive: true });
@@ -81,7 +84,11 @@ function isValidState(payload) {
 }
 
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(__dirname));
+app.use(
+    express.static(
+        path.join(path.dirname(new URL(import.meta.url).pathname), 'dist'),
+    ),
+);
 
 app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
