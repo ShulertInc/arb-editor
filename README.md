@@ -1,5 +1,8 @@
 # ARB Locale Editor
 
+> [!CAUTION]
+> **Disclaimer**: This project was written almost completely by AI and may contain bugs, security issues, and other problems. Use at your own risk and please review the code before running it.
+
 A lightweight browser-based editor for Flutter `.arb` localization files, with SQLite persistence.
 
 ## What it supports
