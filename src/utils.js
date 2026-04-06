@@ -82,6 +82,18 @@ export function tryParseJsonObject(text) {
     return null;
 }
 
+function findMatchingBrace(str, openPos) {
+    let depth = 0;
+    for (let i = openPos; i < str.length; i++) {
+        if (str[i] === '{') depth++;
+        else if (str[i] === '}') {
+            depth--;
+            if (depth === 0) return i;
+        }
+    }
+    return str.length - 1;
+}
+
 export function inferPlaceholdersFromMessage(message) {
     const placeholders = {};
     if (typeof message !== 'string' || message.trim() === '') {
@@ -99,11 +111,13 @@ export function inferPlaceholdersFromMessage(message) {
 
         if (kind === 'plural' || kind === 'selectordinal') {
             placeholders[name] = { type: 'num', example: 2 };
+            pattern.lastIndex = findMatchingBrace(message, match.index) + 1;
             continue;
         }
 
         if (kind === 'select') {
             placeholders[name] = { type: 'String', example: 'other' };
+            pattern.lastIndex = findMatchingBrace(message, match.index) + 1;
             continue;
         }
 
