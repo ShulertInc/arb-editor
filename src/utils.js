@@ -180,9 +180,11 @@ export function sortArbForOutput(arb) {
         .sort((a, b) => a.localeCompare(b));
 
     for (const key of messageKeys) {
-        ordered[key] = arb[key];
-        if (arb[`@${key}`]) {
-            ordered[`@${key}`] = arb[`@${key}`];
+        if (arb[key]) {
+            ordered[key] = arb[key];
+            if (arb[`@${key}`]) {
+                ordered[`@${key}`] = arb[`@${key}`];
+            }
         }
     }
 
