@@ -228,6 +228,42 @@ label {
     gap: 10px;
 }
 
+.inferred-panel {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.inferred-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.inferred-source {
+    margin: 0;
+}
+
+.placeholder-chips {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.placeholder-chip {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--text);
+    font-family: "IBM Plex Mono", Menlo, Monaco, monospace;
+}
+
 .translation-field {
     animation: fadeIn 0.2s ease;
 }
@@ -274,6 +310,11 @@ label {
 
 .btn-danger:hover {
     background: #921b12;
+}
+
+.btn-small {
+    padding: 6px 10px;
+    font-size: 0.8rem;
 }
 
 .issue-item {

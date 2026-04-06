@@ -92,6 +92,11 @@
                             </label>
                         </div>
 
+                        <div
+                            id="translationsGrid"
+                            class="translations-grid"
+                        ></div>
+
                         <label>
                             Placeholders JSON (@key.placeholders)
                             <textarea
@@ -102,10 +107,25 @@
                             ></textarea>
                         </label>
 
-                        <div
-                            id="translationsGrid"
-                            class="translations-grid"
-                        ></div>
+                        <div class="inferred-panel">
+                            <div class="inferred-top-row">
+                                <p
+                                    id="inferredSource"
+                                    class="hint inferred-source"
+                                ></p>
+                                <button
+                                    id="applyInferredBtn"
+                                    class="btn btn-secondary btn-small"
+                                    type="button"
+                                >
+                                    Merge Inferred Placeholders
+                                </button>
+                            </div>
+                            <div
+                                id="inferredPlaceholders"
+                                class="placeholder-chips"
+                            ></div>
+                        </div>
 
                         <div class="editor-actions">
                             <button class="btn" type="submit">

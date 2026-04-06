@@ -18,6 +18,9 @@ const el = {
     messageKey: document.getElementById('messageKey'),
     messageDescription: document.getElementById('messageDescription'),
     placeholdersJson: document.getElementById('placeholdersJson'),
+    inferredSource: document.getElementById('inferredSource'),
+    inferredPlaceholders: document.getElementById('inferredPlaceholders'),
+    applyInferredBtn: document.getElementById('applyInferredBtn'),
     translationsGrid: document.getElementById('translationsGrid'),
     deleteMessageBtn: document.getElementById('deleteMessageBtn'),
     issuesList: document.getElementById('issuesList'),
@@ -126,8 +129,26 @@ function getAllMessageKeys() {
 }
 
 function getTemplateLocale() {
-    const localeNames = Array.from(state.locales.keys()).sort();
-    return localeNames[0] ?? null;
+    const localeNames = Array.from(state.locales.keys());
+    if (localeNames.length === 0) return null;
+
+    const exactEnglish = localeNames.find(
+        locale => locale.toLowerCase() === 'en',
+    );
+    if (exactEnglish) return exactEnglish;
+
+    const englishVariant = localeNames.find(
+        locale =>
+            locale.toLowerCase().startsWith('en_') ||
+            locale.toLowerCase().startsWith('en-'),
+    );
+    if (englishVariant) return englishVariant;
+
+    if (state.selectedLocale && state.locales.has(state.selectedLocale)) {
+        return state.selectedLocale;
+    }
+
+    return localeNames.sort((a, b) => a.localeCompare(b))[0] ?? null;
 }
 
 function ensureLocale(locale) {
@@ -191,6 +212,104 @@ function validatePlaceholders(text) {
     } catch {
         return { ok: false, error: 'Invalid JSON in placeholders.' };
     }
+}
+
+function tryParseJsonObject(text) {
+    if (!text.trim()) return null;
+    try {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return parsed;
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function inferPlaceholdersFromMessage(message) {
+    const placeholders = {};
+    if (typeof message !== 'string' || message.trim() === '') {
+        return placeholders;
+    }
+
+    const pattern =
+        /{\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*(plural|select|selectordinal)\b)?/g;
+    let match = null;
+    while ((match = pattern.exec(message)) !== null) {
+        const name = match[1];
+        const kind = match[2] ?? null;
+
+        if (placeholders[name]) continue;
+
+        if (kind === 'plural' || kind === 'selectordinal') {
+            placeholders[name] = { type: 'num', example: 2 };
+            continue;
+        }
+
+        if (kind === 'select') {
+            placeholders[name] = { type: 'String', example: 'other' };
+            continue;
+        }
+
+        placeholders[name] = { type: 'String' };
+    }
+
+    return placeholders;
+}
+
+function inferPlaceholdersForKey(key) {
+    const defaultLocale = getTemplateLocale();
+    if (!defaultLocale) {
+        return { defaultLocale: null, placeholders: {} };
+    }
+
+    const arb = state.locales.get(defaultLocale);
+    const defaultMessage = arb?.[key];
+    const placeholders = inferPlaceholdersFromMessage(defaultMessage);
+
+    return { defaultLocale, placeholders };
+}
+
+function mergeInferredPlaceholders(inferred, existing) {
+    const merged = deepClone(existing ?? {});
+    for (const [name, config] of Object.entries(inferred)) {
+        if (!merged[name]) {
+            merged[name] = config;
+        }
+    }
+    return merged;
+}
+
+function renderInferredPlaceholderPanel(key) {
+    const { defaultLocale, placeholders } = inferPlaceholdersForKey(key);
+    const entries = Object.entries(placeholders);
+
+    el.inferredPlaceholders.innerHTML = '';
+    if (!defaultLocale) {
+        el.inferredSource.textContent =
+            'Inferred placeholders need at least one locale.';
+        el.applyInferredBtn.disabled = true;
+        return placeholders;
+    }
+
+    if (entries.length === 0) {
+        el.inferredSource.textContent = `No placeholders inferred from ${defaultLocale}.`;
+        el.applyInferredBtn.disabled = true;
+        return placeholders;
+    }
+
+    el.inferredSource.textContent = `Inferred from default locale ${defaultLocale}.`;
+    el.applyInferredBtn.disabled = false;
+
+    for (const [name, config] of entries) {
+        const chip = document.createElement('span');
+        chip.className = 'placeholder-chip';
+        chip.textContent = `${name}: ${config.type}`;
+        el.inferredPlaceholders.appendChild(chip);
+    }
+
+    return placeholders;
 }
 
 function renderMessageList() {
@@ -273,13 +392,22 @@ function renderEditor() {
 
     const templateLocale = getTemplateLocale();
     const meta = templateLocale ? getMessageMeta(templateLocale, key) : {};
+    const inferredPlaceholders = renderInferredPlaceholderPanel(key);
 
     el.messageKey.value = key;
     el.messageDescription.value =
         typeof meta.description === 'string' ? meta.description : '';
-    el.placeholdersJson.value = meta.placeholders
-        ? JSON.stringify(meta.placeholders, null, 2)
-        : '';
+    if (meta.placeholders) {
+        el.placeholdersJson.value = JSON.stringify(meta.placeholders, null, 2);
+    } else if (Object.keys(inferredPlaceholders).length > 0) {
+        el.placeholdersJson.value = JSON.stringify(
+            inferredPlaceholders,
+            null,
+            2,
+        );
+    } else {
+        el.placeholdersJson.value = '';
+    }
 
     buildTranslationInputs(key);
 }
@@ -301,16 +429,16 @@ function runChecks() {
             });
         }
 
-        const templateLocale = getTemplateLocale();
-        if (templateLocale) {
-            const meta = getMessageMeta(templateLocale, key);
-            if (!meta.description) {
-                issues.push({
-                    type: 'warn',
-                    text: `${key}: missing @${key}.description in ${templateLocale}`,
-                });
-            }
-        }
+        // const templateLocale = getTemplateLocale();
+        // if (templateLocale) {
+        //     const meta = getMessageMeta(templateLocale, key);
+        //     if (!meta.description) {
+        //         issues.push({
+        //             type: 'warn',
+        //             text: `${key}: missing @${key}.description in ${templateLocale}`,
+        //         });
+        //     }
+        // }
     }
 
     el.issuesList.innerHTML = '';
@@ -361,7 +489,7 @@ function downloadArb(locale) {
     const arb = state.locales.get(locale);
     if (!arb) return;
     const ordered = sortArbForOutput(arb);
-    const blob = new Blob([`${JSON.stringify(ordered, null, 2)}\n`], {
+    const blob = new Blob([`${JSON.stringify(ordered, null, 4)}\n`], {
         type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -582,6 +710,22 @@ el.exportAllBtn.addEventListener('click', () => {
         downloadArb(locale);
     }
     setStatus(`Exported ${state.locales.size} locale file(s).`);
+});
+
+el.applyInferredBtn.addEventListener('click', () => {
+    const key = state.selectedKey;
+    if (!key) return;
+
+    const { placeholders } = inferPlaceholdersForKey(key);
+    if (Object.keys(placeholders).length === 0) {
+        setStatus('No placeholders were inferred for this message.');
+        return;
+    }
+
+    const existing = tryParseJsonObject(el.placeholdersJson.value) ?? {};
+    const merged = mergeInferredPlaceholders(placeholders, existing);
+    el.placeholdersJson.value = JSON.stringify(merged, null, 2);
+    setStatus('Merged inferred placeholders into metadata JSON.');
 });
 
 loadStateFromServer();
