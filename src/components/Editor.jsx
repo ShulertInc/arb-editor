@@ -130,15 +130,18 @@ export default function Editor({
         );
 
         try {
-            const response = await fetch('/api/translate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sourceText,
-                    sourceLocale,
-                    targets: targetLocales,
-                }),
-            });
+            const response = await fetch(
+                import.meta.env.BASE_URL + 'api/translate',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceText,
+                        sourceLocale,
+                        targets: targetLocales,
+                    }),
+                },
+            );
 
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {

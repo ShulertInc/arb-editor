@@ -140,13 +140,16 @@ export default function App() {
         setStatus('Saving...');
         saveTimerRef.current = setTimeout(async () => {
             try {
-                const response = await fetch('/api/state', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        locales: Object.fromEntries(nextLocales.entries()),
-                    }),
-                });
+                const response = await fetch(
+                    import.meta.env.BASE_URL + 'api/state',
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            locales: Object.fromEntries(nextLocales.entries()),
+                        }),
+                    },
+                );
 
                 if (!response.ok) {
                     throw new Error('Server refused update');
@@ -169,7 +172,9 @@ export default function App() {
 
         async function loadState() {
             try {
-                const response = await fetch('/api/state');
+                const response = await fetch(
+                    import.meta.env.BASE_URL + 'api/state',
+                );
                 if (!response.ok) {
                     throw new Error('Could not fetch initial state');
                 }

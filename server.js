@@ -12,6 +12,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const BASE_PATH = process.env.BASE_PATH || '/';
 const dataDir = path.join(
     path.dirname(new URL(import.meta.url).pathname),
     'data',
@@ -126,21 +127,24 @@ function toDeepLCode(locale, kind) {
 }
 
 app.use(express.json({ limit: '2mb' }));
-app.use(
+
+const router = express.Router();
+
+router.use(
     express.static(
         path.join(path.dirname(new URL(import.meta.url).pathname), 'dist'),
     ),
 );
 
-app.get('/api/health', (_req, res) => {
+router.get('/api/health', (_req, res) => {
     res.json({ ok: true });
 });
 
-app.get('/api/state', (_req, res) => {
+router.get('/api/state', (_req, res) => {
     res.json(parseStateRow());
 });
 
-app.post('/api/translate', async (req, res) => {
+router.post('/api/translate', async (req, res) => {
     const apiKey = process.env.DEEPL_API_KEY;
     if (!apiKey) {
         res.status(500).json({
@@ -237,7 +241,7 @@ app.post('/api/translate', async (req, res) => {
     res.json({ results });
 });
 
-app.put('/api/state', (req, res) => {
+router.put('/api/state', (req, res) => {
     if (!isValidState(req.body)) {
         res.status(400).json({ error: 'Invalid state payload.' });
         return;
@@ -251,7 +255,9 @@ app.put('/api/state', (req, res) => {
     res.json({ ok: true });
 });
 
+app.use(BASE_PATH, router);
+
 app.listen(PORT, () => {
-    console.log(`ARB editor running on http://localhost:${PORT}`);
+    console.log(`ARB editor running on http://localhost:${PORT}${BASE_PATH}`);
     console.log(`SQLite DB: ${dbPath}`);
 });
