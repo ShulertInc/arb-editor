@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+
 export function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
 }
@@ -191,6 +193,25 @@ export function downloadArb(localesMap, locale) {
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `app_${locale}.arb`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+}
+
+export async function downloadAllArbAsZip(localesMap) {
+    const zip = new JSZip();
+
+    for (const [locale, arb] of localesMap.entries()) {
+        const ordered = sortArbForOutput(arb);
+        zip.file(`app_${locale}.arb`, `${JSON.stringify(ordered, null, 4)}\n`);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'arb_locales.zip';
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();

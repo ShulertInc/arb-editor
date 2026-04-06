@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { cn, ui } from '../uiClasses';
-import { downloadArb, getTemplateLocale } from '../utils';
+import { downloadAllArbAsZip, downloadArb } from '../utils';
 
 export default function ExportModal({
     isOpen,
@@ -9,6 +10,11 @@ export default function ExportModal({
     setStatus,
     onClose,
 }) {
+    const sortedLocales = useMemo(
+        () => Array.from(locales.keys()).sort((a, b) => a.localeCompare(b)),
+        [locales],
+    );
+
     if (!isOpen) return null;
 
     const primaryButtonClass = cn(ui.buttonBase, ui.buttonPrimary);
@@ -19,44 +25,41 @@ export default function ExportModal({
         ui.buttonSmall,
     );
 
-    const handleExportCurrent = () => {
+    const handleExportSingle = event => {
         if (locales.size === 0) {
             setStatus('No locales to export.');
             return;
         }
 
-        const selected =
-            (selectedLocale && locales.has(selectedLocale) && selectedLocale) ||
-            getTemplateLocale(locales, selectedLocale);
-
-        if (!selected) {
+        const locale = event.target.value;
+        if (!locale || !locales.has(locale)) {
             setStatus('No locale selected for export.');
             return;
         }
 
-        downloadArb(locales, selected);
-        setStatus(`Exported ${selected}.`);
-        onClose();
+        downloadArb(locales, locale);
+        setStatus(`Exported ${locale}.`);
+        event.target.value = '';
     };
 
-    const handleExportAll = () => {
+    const handleExportAll = async () => {
         if (locales.size === 0) {
             setStatus('No locales to export.');
             return;
         }
 
-        for (const locale of locales.keys()) {
-            downloadArb(locales, locale);
+        try {
+            await downloadAllArbAsZip(locales);
+            setStatus(`Exported ${locales.size} locale file(s) as zip.`);
+        } catch {
+            setStatus('Failed to export all locales as zip.');
         }
-
-        setStatus(`Exported ${locales.size} locale file(s).`);
-        onClose();
     };
 
     return (
         <div className={ui.modalBackdrop} onClick={onClose}>
             <div
-                className={ui.modal}
+                className={cn(ui.modal, 'max-w-xl')}
                 role="dialog"
                 aria-modal="true"
                 onClick={event => event.stopPropagation()}
@@ -84,12 +87,21 @@ export default function ExportModal({
                 </p>
 
                 <div className="flex gap-2 flex-wrap">
-                    <button
-                        className={primaryButtonClass}
-                        onClick={handleExportCurrent}
+                    <select
+                        className={cn(primaryButtonClass, 'appearance-none')}
+                        defaultValue=""
+                        onChange={handleExportSingle}
+                        disabled={sortedLocales.length === 0}
                     >
-                        Export Current Locale
-                    </button>
+                        <option value="" disabled>
+                            Export Locale
+                        </option>
+                        {sortedLocales.map(locale => (
+                            <option key={locale} value={locale}>
+                                app_{locale}.arb
+                            </option>
+                        ))}
+                    </select>
                     <button
                         className={outlineButtonClass}
                         onClick={handleExportAll}
