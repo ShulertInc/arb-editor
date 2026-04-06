@@ -26,6 +26,7 @@ export default function Editor({
     const [draftCustomSection, setDraftCustomSection] = useState('');
     const [draftPlaceholders, setDraftPlaceholders] = useState('');
     const [draftTranslations, setDraftTranslations] = useState({});
+    const [isTranslating, setIsTranslating] = useState(false);
 
     const normalizedSectionOptions = useMemo(() => {
         const cleaned = sectionOptions
@@ -56,6 +57,7 @@ export default function Editor({
 
     const primaryButtonClass = cn(ui.buttonBase, ui.buttonPrimary);
     const dangerButtonClass = cn(ui.buttonBase, ui.buttonDanger);
+    const outlineButtonClass = cn(ui.buttonBase, ui.buttonOutline);
     const outlineSmallButtonClass = cn(
         ui.buttonBase,
         ui.buttonOutline,
@@ -94,6 +96,96 @@ export default function Editor({
         setSelectedKey(nextKeys[0] ?? null);
         setStatus(`Deleted ${selectedKey}.`);
         queueSave(nextLocales);
+    }
+
+    async function handleTranslateWithDeepL() {
+        if (!selectedKey || isTranslating) return;
+
+        const sourceLocale = getTemplateLocale(locales, selectedLocale);
+        if (!sourceLocale) {
+            setStatus('Cannot translate without a source locale.');
+            return;
+        }
+
+        const sourceText = draftTranslations[sourceLocale] ?? '';
+        if (!sourceText.trim()) {
+            setStatus(
+                `Source text is empty for ${sourceLocale}. Add it before translating.`,
+            );
+            return;
+        }
+
+        const targetLocales = Object.keys(draftTranslations)
+            .filter(locale => locale !== sourceLocale)
+            .filter(locale => !(draftTranslations[locale] ?? '').trim());
+
+        if (targetLocales.length === 0) {
+            setStatus('No empty target translations to auto-fill.');
+            return;
+        }
+
+        setIsTranslating(true);
+        setStatus(
+            `Translating ${selectedKey} into ${targetLocales.length} locale(s)...`,
+        );
+
+        try {
+            const response = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sourceText,
+                    sourceLocale,
+                    targets: targetLocales,
+                }),
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(
+                    payload?.error || 'Translation request failed.',
+                );
+            }
+
+            const results = Array.isArray(payload?.results)
+                ? payload.results
+                : [];
+            const successful = results.filter(
+                result => result?.ok && typeof result?.text === 'string',
+            );
+
+            if (successful.length === 0) {
+                const firstError = results.find(result => !result?.ok)?.error;
+                setStatus(
+                    firstError || 'No translations were returned by DeepL.',
+                );
+                return;
+            }
+
+            const updates = Object.fromEntries(
+                successful.map(result => [result.locale, result.text]),
+            );
+
+            setDraftTranslations(prev => ({
+                ...prev,
+                ...updates,
+            }));
+
+            const failedCount = results.length - successful.length;
+            setStatus(
+                failedCount > 0
+                    ? `Translated ${successful.length} locale(s); ${failedCount} failed.`
+                    : `Translated ${successful.length} locale(s) with DeepL.`,
+            );
+        } catch (error) {
+            setStatus(
+                error instanceof Error
+                    ? `DeepL translation failed: ${error.message}`
+                    : 'DeepL translation failed.',
+            );
+        } finally {
+            setIsTranslating(false);
+        }
     }
 
     function handleSaveMessage(event) {
@@ -320,6 +412,14 @@ export default function Editor({
                 <div className="flex gap-2 flex-wrap">
                     <button className={primaryButtonClass} type="submit">
                         Save Message
+                    </button>
+                    <button
+                        className={outlineButtonClass}
+                        type="button"
+                        onClick={handleTranslateWithDeepL}
+                        disabled={isTranslating}
+                    >
+                        {isTranslating ? 'Translating...' : 'Translate Missing'}
                     </button>
                     <button
                         className={dangerButtonClass}

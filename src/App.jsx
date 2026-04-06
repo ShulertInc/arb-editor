@@ -225,21 +225,6 @@ export default function App() {
             setStatus('Start by importing one or more .arb files.');
             return;
         }
-
-        if (
-            !status.startsWith('Saving') &&
-            !status.startsWith('Saved') &&
-            !status.startsWith('Imported') &&
-            !status.startsWith('Failed') &&
-            !status.startsWith('Added') &&
-            !status.startsWith('Created') &&
-            !status.startsWith('Deleted') &&
-            !status.startsWith('Exported')
-        ) {
-            setStatus(
-                `${locales.size} locale(s), ${allKeys.length} message key(s).`,
-            );
-        }
     }, [locales, allKeys, status]);
 
     useEffect(() => {
