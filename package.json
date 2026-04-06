@@ -1,0 +1,15 @@
+{
+    "name": "arb-editor",
+    "version": "1.0.0",
+    "private": true,
+    "description": "ARB localization editor with SQLite persistence",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "better-sqlite3": "^12.8.0",
+        "express": "^5.2.1"
+    }
+}

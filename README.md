@@ -1,6 +1,6 @@
 # ARB Locale Editor
 
-A lightweight browser-based editor for Flutter `.arb` localization files.
+A lightweight browser-based editor for Flutter `.arb` localization files, with SQLite persistence.
 
 ## What it supports
 
@@ -11,10 +11,37 @@ A lightweight browser-based editor for Flutter `.arb` localization files.
 - Add locale files and new message keys
 - Basic checks for missing translations and missing descriptions
 - Export current locale or all locales as pretty-printed ARB
+- Persist all locale/message data on the server in SQLite
 
 ## Run it
 
-Open `index.html` in your browser.
+1. Install dependencies:
+
+    ```bash
+    npm install
+    ```
+
+2. Start the server:
+
+    ```bash
+    npm start
+    ```
+
+3. Open:
+
+    ```text
+    http://localhost:3000
+    ```
+
+SQLite DB file location:
+
+- `data/arb-editor.db`
+
+Server API endpoints:
+
+- `GET /api/state` - fetch persisted editor state
+- `PUT /api/state` - persist current editor state
+- `GET /api/health` - health check
 
 ## Notes for Flutter `gen-l10n`
 

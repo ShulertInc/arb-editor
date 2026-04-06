@@ -2,6 +2,8 @@ const state = {
     locales: new Map(),
     selectedKey: null,
     selectedLocale: null,
+    saveTimer: null,
+    isHydrating: true,
 };
 
 const el = {
@@ -28,6 +30,80 @@ const el = {
 
 function setStatus(text) {
     el.status.textContent = text;
+}
+
+function getSerializableState() {
+    return {
+        locales: Object.fromEntries(state.locales.entries()),
+    };
+}
+
+function hydrateState(payload) {
+    state.locales = new Map();
+    const locales = payload?.locales ?? {};
+
+    for (const [locale, arb] of Object.entries(locales)) {
+        if (!arb || typeof arb !== 'object' || Array.isArray(arb)) continue;
+        state.locales.set(locale, arb);
+    }
+
+    state.selectedLocale = getTemplateLocale();
+    state.selectedKey = getAllMessageKeys()[0] ?? null;
+}
+
+async function persistState() {
+    if (state.isHydrating) return;
+
+    try {
+        const response = await fetch('/api/state', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(getSerializableState()),
+        });
+
+        if (!response.ok) {
+            throw new Error('Server refused update');
+        }
+    } catch {
+        setStatus('Save failed: could not persist to server.');
+    }
+}
+
+function queueSave() {
+    if (state.isHydrating) return;
+    if (state.saveTimer) {
+        clearTimeout(state.saveTimer);
+    }
+    setStatus('Saving...');
+    state.saveTimer = setTimeout(async () => {
+        await persistState();
+        state.saveTimer = null;
+        const localeCount = state.locales.size;
+        const keyCount = getAllMessageKeys().length;
+        setStatus(
+            `Saved to SQLite. ${localeCount} locale(s), ${keyCount} message key(s).`,
+        );
+    }, 350);
+}
+
+async function loadStateFromServer() {
+    try {
+        const response = await fetch('/api/state');
+        if (!response.ok) {
+            throw new Error('Could not fetch initial state');
+        }
+        const payload = await response.json();
+        hydrateState(payload);
+        state.isHydrating = false;
+        render();
+        setStatus('Loaded from SQLite.');
+    } catch {
+        state.isHydrating = false;
+        render();
+        setStatus('Server unavailable. Working in local in-memory mode.');
+    }
 }
 
 function deepClone(value) {
@@ -59,6 +135,7 @@ function ensureLocale(locale) {
         state.locales.set(locale, {
             '@@locale': locale,
         });
+        queueSave();
     }
 }
 
@@ -85,6 +162,7 @@ function deleteMessageEverywhere(key) {
         delete arb[key];
         delete arb[`@${key}`];
     }
+    queueSave();
 }
 
 function renameMessageKey(oldKey, newKey) {
@@ -99,6 +177,7 @@ function renameMessageKey(oldKey, newKey) {
             delete arb[`@${oldKey}`];
         }
     }
+    queueSave();
 }
 
 function validatePlaceholders(text) {
@@ -345,6 +424,7 @@ async function importArbFiles(fileList) {
 
     render();
     setStatus(`Imported ${imported} file(s).`);
+    queueSave();
 }
 
 el.importFiles.addEventListener('change', event => {
@@ -395,6 +475,7 @@ el.newMessageBtn.addEventListener('click', () => {
     state.selectedKey = key;
     render();
     setStatus(`Created message key ${key}.`);
+    queueSave();
 });
 
 el.editorForm.addEventListener('submit', event => {
@@ -455,6 +536,7 @@ el.editorForm.addEventListener('submit', event => {
     state.selectedKey = newKey;
     render();
     setStatus(`Saved ${newKey}.`);
+    queueSave();
 });
 
 el.deleteMessageBtn.addEventListener('click', () => {
@@ -502,4 +584,4 @@ el.exportAllBtn.addEventListener('click', () => {
     setStatus(`Exported ${state.locales.size} locale file(s).`);
 });
 
-render();
+loadStateFromServer();
