@@ -44,12 +44,48 @@ export default function App() {
 
     const allKeys = useMemo(() => getAllMessageKeys(locales), [locales]);
     const checks = useMemo(() => runChecks(locales), [locales]);
+    const keySections = useMemo(() => {
+        const next = {};
+
+        for (const key of allKeys) {
+            let section = '';
+
+            if (defaultLocale) {
+                const meta = getMessageMeta(locales, defaultLocale, key);
+                if (typeof meta.section === 'string') {
+                    section = meta.section.trim();
+                }
+            }
+
+            if (!section) {
+                const separatorMatch = key.match(/[./:]/);
+                section = separatorMatch
+                    ? key.slice(0, separatorMatch.index).trim()
+                    : '';
+            }
+
+            next[key] = section || 'General';
+        }
+
+        return next;
+    }, [allKeys, locales, defaultLocale]);
+    const sectionOptions = useMemo(() => {
+        const unique = new Set(Object.values(keySections));
+        unique.add('General');
+
+        return Array.from(unique).sort((a, b) => {
+            if (a === 'General') return -1;
+            if (b === 'General') return 1;
+            return a.localeCompare(b);
+        });
+    }, [keySections]);
 
     const editorState = useMemo(() => {
         if (!selectedKey) {
             return {
                 key: '',
                 description: '',
+                section: '',
                 placeholdersJson: '',
                 inferredPlaceholders: {},
                 inferredSource: '',
@@ -85,6 +121,7 @@ export default function App() {
             key: selectedKey,
             description:
                 typeof meta.description === 'string' ? meta.description : '',
+            section: typeof meta.section === 'string' ? meta.section : '',
             placeholdersJson,
             inferredPlaceholders: inferred.placeholders,
             inferredSource: inferred.defaultLocale
@@ -241,6 +278,7 @@ export default function App() {
                 <section className="grid grid-cols-[320px_1fr] gap-3.5 max-[980px]:grid-cols-1">
                     <MessageList
                         allKeys={allKeys}
+                        keySections={keySections}
                         selectedKey={selectedKey}
                         defaultLocale={defaultLocale}
                         locales={locales}
@@ -250,6 +288,7 @@ export default function App() {
                     <Editor
                         selectedKey={selectedKey}
                         editorState={editorState}
+                        sectionOptions={sectionOptions}
                         locales={locales}
                         selectedLocale={selectedLocale}
                         allKeys={allKeys}

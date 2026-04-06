@@ -1,3 +1,5 @@
+import { twMerge } from 'tailwind-merge';
+
 export const ui = {
     panel: 'bg-white border border-gray-200 rounded-[10px] shadow-[0_1px_2px_rgba(24,24,27,0.06),0_8px_20px_rgba(24,24,27,0.04)] p-3.5 flex flex-col gap-3',
     input: 'w-full border border-gray-200 rounded-[10px] px-3 py-2.5 bg-white text-primary text-sm focus:outline-2 focus:outline-offset-0 focus:outline-gray-400 focus:border-transparent',
@@ -14,5 +16,5 @@ export const ui = {
 };
 
 export function cn(...values) {
-    return values.filter(Boolean).join(' ');
+    return twMerge(...values);
 }

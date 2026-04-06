@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn, ui } from '../uiClasses';
 import {
     getAllMessageKeys,
@@ -11,6 +11,7 @@ import {
 export default function Editor({
     selectedKey,
     editorState,
+    sectionOptions,
     locales,
     selectedLocale,
     allKeys,
@@ -21,15 +22,37 @@ export default function Editor({
 }) {
     const [draftKey, setDraftKey] = useState('');
     const [draftDescription, setDraftDescription] = useState('');
+    const [draftSectionChoice, setDraftSectionChoice] = useState('General');
+    const [draftCustomSection, setDraftCustomSection] = useState('');
     const [draftPlaceholders, setDraftPlaceholders] = useState('');
     const [draftTranslations, setDraftTranslations] = useState({});
+
+    const normalizedSectionOptions = useMemo(() => {
+        const cleaned = sectionOptions
+            .map(option => option.trim())
+            .filter(Boolean);
+        return cleaned.includes('General') ? cleaned : ['General', ...cleaned];
+    }, [sectionOptions]);
 
     useEffect(() => {
         setDraftKey(editorState.key);
         setDraftDescription(editorState.description);
+
+        const currentSection = (editorState.section || '').trim();
+        if (
+            currentSection &&
+            !normalizedSectionOptions.includes(currentSection)
+        ) {
+            setDraftSectionChoice('__other__');
+            setDraftCustomSection(currentSection);
+        } else {
+            setDraftSectionChoice(currentSection || 'General');
+            setDraftCustomSection('');
+        }
+
         setDraftPlaceholders(editorState.placeholdersJson);
         setDraftTranslations(editorState.translations);
-    }, [editorState]);
+    }, [editorState, normalizedSectionOptions]);
 
     const primaryButtonClass = cn(ui.buttonBase, ui.buttonPrimary);
     const dangerButtonClass = cn(ui.buttonBase, ui.buttonDanger);
@@ -131,8 +154,15 @@ export default function Editor({
             const target = { ...nextLocales.get(template) };
             const meta = {};
             const description = draftDescription.trim();
+            const section =
+                draftSectionChoice === '__other__'
+                    ? draftCustomSection.trim()
+                    : draftSectionChoice.trim();
             if (description) {
                 meta.description = description;
+            }
+            if (section && section !== 'General') {
+                meta.section = section;
             }
             if (placeholderCheck.value) {
                 meta.placeholders = placeholderCheck.value;
@@ -171,7 +201,7 @@ export default function Editor({
     return (
         <section className={cn(ui.panel, 'min-h-96')}>
             <form className="grid gap-3" onSubmit={handleSaveMessage}>
-                <div className="grid grid-cols-2 gap-2.5 max-[720px]:grid-cols-1">
+                <div className="grid grid-cols-3 gap-2.5 max-[900px]:grid-cols-1">
                     <label className={ui.label}>
                         <span>Message Key</span>
                         <input
@@ -193,6 +223,34 @@ export default function Editor({
                                 setDraftDescription(event.target.value)
                             }
                         />
+                    </label>
+                    <label className={ui.label}>
+                        <span>Section</span>
+                        <select
+                            className={ui.input}
+                            value={draftSectionChoice}
+                            onChange={event =>
+                                setDraftSectionChoice(event.target.value)
+                            }
+                        >
+                            {normalizedSectionOptions.map(option => (
+                                <option key={option} value={option}>
+                                    {option}
+                                </option>
+                            ))}
+                            <option value="__other__">Other...</option>
+                        </select>
+                        {draftSectionChoice === '__other__' ? (
+                            <input
+                                className={ui.input}
+                                type="text"
+                                placeholder="Enter custom section"
+                                value={draftCustomSection}
+                                onChange={event =>
+                                    setDraftCustomSection(event.target.value)
+                                }
+                            />
+                        ) : null}
                     </label>
                 </div>
 
