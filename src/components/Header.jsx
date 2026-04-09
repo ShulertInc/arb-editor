@@ -93,6 +93,46 @@ export default function Header({
         queueSave(nextLocales);
     }
 
+    function handleRemoveLocale() {
+        if (locales.size === 0) {
+            setStatus('No locales to remove.');
+            return;
+        }
+
+        const localeList = Array.from(locales.keys()).join(', ');
+        const locale = window.prompt(
+            `Enter locale to remove (available: ${localeList}):`,
+        );
+        if (!locale) return;
+        if (!locales.has(locale)) {
+            setStatus(`Locale ${locale} does not exist.`);
+            return;
+        }
+
+        const arb = locales.get(locale);
+        const keys = Object.entries(arb).filter(
+            ([key, value]) => !key.startsWith('@@') && value !== '',
+        );
+
+        if (keys.length > 0) {
+            window.alert(
+                `Locale ${locale} has ${keys.length} message(s). Remove them before deleting the locale.`,
+            );
+            return;
+        }
+
+        const nextLocales = new Map(locales);
+        nextLocales.delete(locale);
+        setLocales(nextLocales);
+
+        if (selectedLocale === locale) {
+            setSelectedLocale(getTemplateLocale(nextLocales, null));
+        }
+
+        setStatus(`Removed locale ${locale}.`);
+        queueSave(nextLocales);
+    }
+
     function handleAddMessage() {
         if (locales.size === 0) {
             setStatus('Add a locale first, then create message keys.');
@@ -149,6 +189,12 @@ export default function Header({
                     onClick={handleAddLocale}
                 >
                     Add Locale
+                </button>
+                <button
+                    className={outlineButtonClass}
+                    onClick={handleRemoveLocale}
+                >
+                    Remove Locale
                 </button>
                 <button
                     className={outlineButtonClass}
